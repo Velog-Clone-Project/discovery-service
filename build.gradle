@@ -33,6 +33,12 @@ dependencyManagement {
     }
 }
 
+bootJar {
+    archiveBaseName.set("app")
+    archiveVersion.set("")         // 버전 정보 제거
+    archiveClassifier.set("")      // plain 같은 부가 이름 제거
+}
+
 tasks.named('test') {
     useJUnitPlatform()
 }
