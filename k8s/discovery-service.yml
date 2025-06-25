@@ -26,6 +26,19 @@ spec:
       labels:
         app: discovery-service
     spec:
+      initContainers:
+        - name: wait-for-config
+          image: curlimages/curl:8.7.1
+          command: [ "/bin/sh", "-c" ]
+          args:
+            - |
+              echo "Waiting for config-service...";
+              until curl -s http://config-service:8888/actuator/health | grep '"status":"UP"' > /dev/null; do
+                echo "Config-service not ready yet. Waiting...";
+                sleep 3;
+              done
+              echo "Config-service is UP.";
+
       containers:
         - name: discovery-service
           image: lhdmir/discovery-service:latest
