@@ -2,13 +2,13 @@ name: Deploy Discovery Service (on PR merge to main)
 
 on:
   pull_request:
-    types: [closed]
+    types: [ closed ]
     branches: [ main ]
 
 jobs:
   deploy:
     if: github.event.pull_request.merged == true
-    runs-on: [self-hosted, discovery-service]
+    runs-on: [ self-hosted, discovery-service ]
 
     steps:
       - name: Checkout source
@@ -35,13 +35,22 @@ jobs:
           echo "${{ secrets.DOCKER_TOKEN }}" | docker login -u "${{ secrets.DOCKER_USER }}" --password-stdin
           docker push ${{ secrets.DOCKER_USER }}/discovery-service:latest
 
-      - name: SSH into infra-node and restart discovery-service
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Copy Kubernetes manifest to server
+        uses: appleboy/scp-action@v0.1.4
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "./k8s/discovery-service.yml"
+          target: "~/discovery/"
+
+      - name: Deploy to Kubernetes on remote server
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
           script: |
-            cd /home/${{ secrets.SSH_USER }}/discovery-service
-            docker compose pull discovery-service
-            docker compose up -d --no-deps discovery-service
+            cd ~/discovery/k8s
+            kubectl delete deployment discovery-service --ignore-not-found
+            kubectl apply -f discovery-service.yml
